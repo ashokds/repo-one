@@ -6,10 +6,13 @@ struct ContentView: View {
     var body: some View {
         ZStack {
             VStack(spacing: 20) {
-                // Title with difficulty and settings
+                // Title with avatar and settings
                 HStack {
-                    Spacer()
-                        .frame(width: 44)
+                    // Avatar button (left)
+                    AvatarButton(profile: viewModel.profileManager.currentProfile) {
+                        viewModel.showProfileSwitcher = true
+                    }
+                    .frame(width: 44)
 
                     Spacer()
 
@@ -24,6 +27,7 @@ struct ContentView: View {
 
                     Spacer()
 
+                    // Settings button (right)
                     Button(action: {
                         viewModel.showSettings = true
                     }) {
@@ -88,6 +92,9 @@ struct ContentView: View {
         }
         .sheet(isPresented: $viewModel.showSettings) {
             SettingsView(settings: viewModel.settings)
+        }
+        .sheet(isPresented: $viewModel.showProfileSwitcher) {
+            ProfileSwitcherView(profileManager: viewModel.profileManager)
         }
     }
 
