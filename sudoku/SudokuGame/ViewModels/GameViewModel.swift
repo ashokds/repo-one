@@ -20,12 +20,15 @@ class GameViewModel: ObservableObject {
     @Published var showAutoFillPrompt = false
     @Published var showGameHistory = false
     @Published var showSettings = false
+    @Published var showProfileSwitcher = false
     @Published var hintAnimationCell: (row: Int, col: Int)?
 
     let historyManager = GameHistoryManager()
     let settings = GameSettings()
+    let profileManager = ProfileManager()
     private var currentGameId: UUID = UUID()
     private var currentGameStartDate: Date = Date()
+    private var gameStartTime: Date?
 
     private let generator = PuzzleGenerator()
     private var cancellables = Set<AnyCancellable>()
@@ -44,6 +47,13 @@ class GameViewModel: ObservableObject {
             }
             .store(in: &cancellables)
 
+        // Forward profileManager changes to this view model
+        profileManager.objectWillChange
+            .sink { [weak self] _ in
+                self?.objectWillChange.send()
+            }
+            .store(in: &cancellables)
+
         // Try to load saved game, otherwise start new
         if !loadGame() {
             startNewGame(difficulty: .medium)
@@ -57,6 +67,7 @@ class GameViewModel: ObservableObject {
         currentDifficulty = difficulty
         currentGameId = UUID()
         currentGameStartDate = Date()
+        gameStartTime = Date()
 
         let (puzzle, solution) = generator.generatePuzzle(difficulty: difficulty.cellsToRemove)
 
@@ -75,6 +86,9 @@ class GameViewModel: ObservableObject {
 
         gameState.reset()
         clearSavedGame()
+
+        // Record game started for profile stats
+        profileManager.recordGameStarted()
     }
 
     func selectCell(row: Int, col: Int) {
@@ -271,6 +285,12 @@ class GameViewModel: ObservableObject {
         if board.isSolved() {
             gameState.isGameWon = true
             saveCompletedGameToHistory()
+
+            // Record completion in profile stats
+            if let startTime = gameStartTime {
+                let completionTime = Date().timeIntervalSince(startTime)
+                profileManager.recordGameCompleted(difficulty: currentDifficulty, time: completionTime)
+            }
         }
     }
 
